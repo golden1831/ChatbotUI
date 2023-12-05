@@ -50,22 +50,36 @@ export default function Home() {
 
     var config = {
       method: "POST",
-      url: `https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/get-product`,
+      // url: `https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/get-product`,
+      url: `http://127.0.0.1:5025/catalogaicopilot/get-product`,
       data: { question },
       header: {
 
       }
     };
 
-    axios.post("https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/get-product", { question })
+    axios.post("http://127.0.0.1:5025/catalogaicopilot/get-product", { question })
       .then(function (response) {
         let current_messages = messages;
+        // console.log(JSON.stringify(JSON.parse(response.data.result)));
         console.log("response ---> ", response);
         current_messages.pop();
-        setMessages((messages) => [
-          ...current_messages,
-          { key: current_messages.length, data: response.data.result },
-        ]);
+        if( response.data.isJSON ){
+          setMessages((messages) => [
+            ...current_messages,
+            { key: current_messages.length, data: response.data.result },
+          ]);
+        } else {
+          let response_data = JSON.parse(response.data.result);
+          let data = [];
+          Object.keys(response_data).map(item =>  data.push({ key: item, data: response_data[item] }))
+          let response_jsx = <>{data.map((item, index) => <p key={index}><b style={{ textTransform: 'uppercase' }}>{item.key}: </b><span>{item.data}</span></p>)}</>
+          setMessages((messages) => [
+            ...current_messages,
+            { key: current_messages.length, data: response_jsx  },
+          ]);
+        }      
+        
         is_loading = false;
         setQuestion("");
       })

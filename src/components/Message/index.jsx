@@ -20,15 +20,7 @@ export default function Message(props) {
             <BouncingDotsLoader />
           ) : (
             <Wrap>
-              {props.me === true ? (
-                <p>{props.message}</p>
-              ) : (
-                <TypeWriter
-                  content={props.message}
-                  speed={10}
-                  box_ref={props.box_ref}
-                />
-              )}
+              <div>{props.message}</div>
             </Wrap>
           )}
         </CardBody>
