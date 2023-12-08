@@ -44,18 +44,74 @@ export default function Home() {
         </Space>
       </Radio.Group>
     
-    axios.post(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/get-product`, { question:value })
+    // axios.post(`http://127.0.0.1:5025/catalogaicopilot/get-product`, { question: value })
+    axios.post(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/get-product`, { question: value })
       .then(function (response) {
+        const categorize = <><Box textAlign={'center'}><Box as="h3" fontWeight={'bold'} fontSize={'18px'}>Drinks or Foods or Others?</Box><span>{response.data.categorization}</span></Box></>
+
+        const pType = <><Box textAlign={'center'}><Box as="h3" fontWeight={'bold'} fontSize={'18px'}>Sinlge product or Multi product?</Box><span>{ response.data.pType}</span></Box></>
+
+        const formFactor = response.data.formFactor;
+        const formFactorData = <><Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>Form Foctors about product</Box><table className="chat_table">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Name</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Container</td>
+              <td>{formFactor.container}</td>
+            </tr>
+            <tr>
+            <td>Drink</td>
+              <td>{formFactor.drink}</td>
+            </tr>
+            <tr>
+            <td>Volume Metric</td>
+              <td>{formFactor.volume_metric}</td>
+            </tr>
+          </tbody>
+        </table></Box></>
+
+        let pData = response.data.productDetail;
+        console.log("pData >>>>>>>>", pData);
+        let data = [];
+        Object.keys(pData).map(item =>  data.push({ key: item, data: pData[item] }))
+        console.log("Object Keys >>>>>>>>");
+        let pData_jsx = <><Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>Product Details</Box>{data.map((item, index) => item.key !== 'image' ? (<p key={index}><b style={{ textTransform: 'uppercase' }}>{item.key}: </b><span>{item.data}</span></p>): (<Box display={'flex'} flexDirection={'column'} gap={'10px'} justifyContent={'center'} alignItems={'center'}>{item?.data?.map((item) => <img src={item} alt="" width={'100px'} height={'100px'} />)}</Box>) )}</Box></>
+        
+        console.log("====================", pData_jsx, formFactorData, categorize, pType);
+
         let current_messages = [
           ...messages.slice(0, -1),
           { key: messages.length - 1, data: radio_jsx },
           { key: messages.length, data: value }
         ];
-        console.log("response ---> ", response);
-        setMessages((messages) => [
-          ...current_messages,
-          { key: current_messages.length, data: response.data.result },
-        ]);
+        current_messages.push(
+          { key: messages.length + 1, data: categorize },
+        );
+        current_messages.push(
+          { key: messages.length + 2, data: "" },
+        );
+        current_messages.push(
+          { key: messages.length + 3, data: pType },
+        );
+        current_messages.push(
+          { key: messages.length + 4, data: "" },
+        );
+        current_messages.push(
+          { key: messages.length + 5, data: formFactorData },
+        );
+        current_messages.push(
+          { key: messages.length + 6, data: "" },
+        );
+        current_messages.push(
+          { key: messages.length + 7, data: pData_jsx },
+        );    
+        console.log("current message ---->", current_messages);
+        setMessages([...current_messages]);
         is_loading = false;
         setQuestion("");
       })

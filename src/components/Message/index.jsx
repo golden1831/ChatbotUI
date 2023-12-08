@@ -3,8 +3,9 @@ import TypeWriter from "../TypeWriter";
 import BouncingDotsLoader from "../BouncingDotsLoader";
 
 export default function Message(props) {
+  const { message } = props;
   return (
-    <Flex width={"100%"}>
+    message !== '' ? <Flex width={"100%"}>
       {props.me === true ? <Spacer /> : null}
       <Card
         marginBottom={"7px"}
@@ -26,6 +27,6 @@ export default function Message(props) {
         </CardBody>
       </Card>
       {props.me === true ? null : <Spacer />}
-    </Flex>
+    </Flex> : <></>
   );
 }

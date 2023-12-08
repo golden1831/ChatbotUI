@@ -17,3 +17,12 @@
   background-color: #aaaaaa;
   border-radius: 100px;
 }
+
+.chat_table {
+  border: 1px solid #333;
+}
+
+.chat_table th, .chat_table td {
+  border: 1px solid #333;
+  border-collapse: collapse;
+}
