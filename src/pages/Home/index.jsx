@@ -1,8 +1,10 @@
-import { Button, Text, Flex, Box, Spacer } from "@chakra-ui/react";
+import { Text, Flex, Box, Spacer } from "@chakra-ui/react";
 import { Card } from "@chakra-ui/react";
 import { Input, IconButton } from "@chakra-ui/react";
 import { useDisclosure } from "@chakra-ui/react";
 import { ChatIcon } from "@chakra-ui/icons";
+
+import { Radio, Space } from 'antd';
 
 import EmbedModal from "../../components/EmbedModal";
 import Message from "../../components/Message";
@@ -19,6 +21,48 @@ export default function Home() {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState([]);
+
+  const [value, setValue] = useState("");
+  const [disable, setDisable] = useState(false);
+  const [data, setData] = useState([]);
+
+  const onChange = (e) => {
+    console.log('radio checked', e.target.value);
+    setValue(e.target.value);
+    setDisable(true);
+  };
+
+  useEffect(() => {
+    if(!messages.length) return;
+    console.log("data--->", data);
+    let radio_jsx = 
+      <Radio.Group defaultValue="a" buttonStyle="solid" onChange={onChange} value={value}>
+        <Space direction="vertical">
+          {data.map((value) => {
+            return <Radio.Button value={value} disabled={disable}>{value}</Radio.Button>
+          })}
+        </Space>
+      </Radio.Group>
+    
+    axios.post(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/get-product`, { question:value })
+      .then(function (response) {
+        let current_messages = [
+          ...messages.slice(0, -1),
+          { key: messages.length - 1, data: radio_jsx },
+          { key: messages.length, data: value }
+        ];
+        console.log("response ---> ", response);
+        setMessages((messages) => [
+          ...current_messages,
+          { key: current_messages.length, data: response.data.result },
+        ]);
+        is_loading = false;
+        setQuestion("");
+      })
+      .catch(function (error) {
+        return error;
+      });
+  }, [disable])
 
   const req_qa_box = useRef(null);
 
@@ -48,26 +92,40 @@ export default function Home() {
 
     req_qa_box.current.scrollTop = req_qa_box.current.scrollHeight;
 
-    var config = {
-      method: "POST",
-      url: `https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/category-product`,
-      // url: `http://127.0.0.1:5025/catalogaicopilot/category-product`,
-      data: { question },
-      header: {
-
-      }
-    };
-
-    axios.post("https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/category-product", { question })
+    axios.post(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/get-product`, { question })
+    // axios.post(`http://127.0.0.1:5025/catalogaicopilot/get-product`, { question })
       .then(function (response) {
         let current_messages = messages;
-        // console.log(JSON.stringify(JSON.parse(response.data.result)));
         console.log("response ---> ", response);
         current_messages.pop();
-        setMessages((messages) => [
+        switch (response.data.isJSON) {
+          case 0:
+            setMessages((messages) => [
+                  ...current_messages,
+                  { key: current_messages.length, data: response.data.result },
+                ]);
+            break;
+          case 1:
+            const data = response.data.result.versions;
+            setData(data);
+            let radio_jsx = 
+              <Radio.Group defaultValue="a" buttonStyle="solid" onChange={onChange} value={value}>
+                <Space direction="vertical">
+                  {data.map((value) => {
+                    return <Radio.Button value={value} disabled={disable}>{value}</Radio.Button>
+                  })}
+                </Space>
+              </Radio.Group>
+            setMessages((messages) => [
               ...current_messages,
-              { key: current_messages.length, data: response.data.result.text },
+              { key: current_messages.length, data: radio_jsx },
             ]);
+            break;
+        
+          default:
+            break;
+        }
+
         // if( response.data.isJSON ){
         //   setMessages((messages) => [
         //     ...current_messages,
@@ -102,11 +160,6 @@ export default function Home() {
             </Text>
           </Box>
           <Spacer />
-          <Box p="4">
-            {/* <Button colorScheme="gray" onClick={onOpen}>
-              Embed on website
-            </Button> */}
-          </Box>
         </Flex>
         <Card variant="outline" padding={"8px"}>
           <Flex
