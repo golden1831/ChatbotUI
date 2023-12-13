@@ -4,7 +4,7 @@ import { Input, IconButton } from "@chakra-ui/react";
 import { useDisclosure } from "@chakra-ui/react";
 import { ChatIcon } from "@chakra-ui/icons";
 
-import { Radio, Space } from 'antd';
+import { Radio, Space, message } from 'antd';
 
 import EmbedModal from "../../components/EmbedModal";
 import Message from "../../components/Message";
@@ -27,23 +27,21 @@ export default function Home() {
   const [data, setData] = useState([]);
 
   const onChange = (e) => {
-    console.log('radio checked', e.target.value);
     setValue(e.target.value);
     setDisable(true);
   };
 
   useEffect(() => {
     if(!messages.length) return;
-    console.log("data--->", data);
     let radio_jsx = 
       <Radio.Group defaultValue="a" buttonStyle="solid" onChange={onChange} value={value}>
         <Space direction="vertical">
           {data.map((value) => {
-            return <Radio.Button value={value} disabled={disable}>{value}</Radio.Button>
+            return <Radio.Button value={value}>{value}</Radio.Button>
           })}
         </Space>
       </Radio.Group>
-    
+    console.log(">>>>>>>>>>>", messages);
     // axios.post(`http://127.0.0.1:5025/catalogaicopilot/get-product`, { question: value })
     axios.post(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/get-product`, { question: value })
       .then(function (response) {
@@ -55,35 +53,60 @@ export default function Home() {
         const formFactorData = <><Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>Form Foctors about product</Box><table className="chat_table">
           <thead>
             <tr>
-              <th>Title</th>
-              <th>Name</th>
+              <th>Type</th>
+              <th>Unit</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>Container</td>
-              <td>{formFactor.container}</td>
+              <td>Beer Glass</td>
+              <td>{formFactor.BeerGlass}</td>
             </tr>
             <tr>
-            <td>Drink</td>
-              <td>{formFactor.drink}</td>
+            <td>Wine Glass</td>
+              <td>{formFactor.WineGlass}</td>
             </tr>
             <tr>
-            <td>Volume Metric</td>
-              <td>{formFactor.volume_metric}</td>
+            <td>Paper Cup</td>
+              <td>{formFactor.PaperCup}</td>
             </tr>
           </tbody>
         </table></Box></>
 
+        let suggestedData = response.data.suggestedProductTitle;
+        // let current_messages;
+        let suggestedData_jsx = <><Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>Suggested Product Title Based on the location</Box><table className="chat_table">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Title</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Local Name</td>
+            <td>{suggestedData.localname}</td>
+          </tr>
+          <tr>
+          <td>International Recognized Brand</td>
+            <td>{suggestedData.internationalrecognizedbrand}</td>
+          </tr>
+          <tr>
+          <td>Colloquial/Popular terms</td>
+            <td>{suggestedData.colloquial}</td>
+          </tr>
+          <tr>
+          <td>Additional Relevant Name</td>
+          <td>{suggestedData.additionalrelevantnames}</td>
+          </tr>
+        </tbody>
+        </table></Box></>
+
         let pData = response.data.productDetail;
-        console.log("pData >>>>>>>>", pData);
+
         let data = [];
         Object.keys(pData).map(item =>  data.push({ key: item, data: pData[item] }))
-        console.log("Object Keys >>>>>>>>");
         let pData_jsx = <><Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>Product Details</Box>{data.map((item, index) => item.key !== 'image' ? (<p key={index}><b style={{ textTransform: 'uppercase' }}>{item.key}: </b><span>{item.data}</span></p>): (<Box display={'flex'} flexDirection={'column'} gap={'10px'} justifyContent={'center'} alignItems={'center'}>{item?.data?.map((item) => <img src={item} alt="" width={'100px'} height={'100px'} />)}</Box>) )}</Box></>
-        
-        console.log("====================", pData_jsx, formFactorData, categorize, pType);
-
         let current_messages = [
           ...messages.slice(0, -1),
           { key: messages.length - 1, data: radio_jsx },
@@ -108,17 +131,43 @@ export default function Home() {
           { key: messages.length + 6, data: "" },
         );
         current_messages.push(
-          { key: messages.length + 7, data: pData_jsx },
-        );    
-        console.log("current message ---->", current_messages);
+          { key: messages.length + 7, data: suggestedData_jsx },
+        );
+        current_messages.push(
+          { key: messages.length + 8, data: "" },
+        );
+        current_messages.push(
+          { key: messages.length + 9, data: pData_jsx },
+        );
+        console.log("1>>>", current_messages);
         setMessages([...current_messages]);
+        if (response.data.nextProduct) {
+          current_messages.push(
+            { key: current_messages.length, data: "" },
+          );
+          axios.post(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/get-product`, { flag: 1 }).then((response) => {
+          // axios.post(`http://127.0.0.1:5025/catalogaicopilot/get-product`, { flag: 1 }).then((response) => {
+            const data = response.data.result.versions;
+            setData(data);
+            let radio_jsx = 
+              <Radio.Group defaultValue="a" buttonStyle="solid" onChange={onChange} value={value}>
+                <Space direction="vertical">
+                  {data.map((value) => {
+                    return <Radio.Button value={value}>{value}</Radio.Button>
+                  })}
+                </Space>
+              </Radio.Group>
+            current_messages.push({ key: current_messages.length, data: radio_jsx });
+            setMessages([...current_messages]);
+          })
+        }
         is_loading = false;
         setQuestion("");
       })
       .catch(function (error) {
         return error;
       });
-  }, [disable])
+  }, [value])
 
   const req_qa_box = useRef(null);
 
@@ -152,7 +201,6 @@ export default function Home() {
     // axios.post(`http://127.0.0.1:5025/catalogaicopilot/get-product`, { question })
       .then(function (response) {
         let current_messages = messages;
-        console.log("response ---> ", response);
         current_messages.pop();
         switch (response.data.isJSON) {
           case 0:
@@ -168,7 +216,7 @@ export default function Home() {
               <Radio.Group defaultValue="a" buttonStyle="solid" onChange={onChange} value={value}>
                 <Space direction="vertical">
                   {data.map((value) => {
-                    return <Radio.Button value={value} disabled={disable}>{value}</Radio.Button>
+                    return <Radio.Button value={value}>{value}</Radio.Button>
                   })}
                 </Space>
               </Radio.Group>
