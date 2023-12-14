@@ -21,6 +21,7 @@ export default function Home() {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState([]);
+  const [message, setMessage] = useState("");
 
   const [value, setValue] = useState("");
   const [disable, setDisable] = useState(false);
@@ -34,6 +35,8 @@ export default function Home() {
   useEffect(() => {
     if(!messages.length) return;
     let radio_jsx = 
+    <>
+      <Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What is the brand and types of {message}?</Box></Box>
       <Radio.Group defaultValue="a" buttonStyle="solid" onChange={onChange} value={value}>
         <Space direction="vertical">
           {data.map((value) => {
@@ -41,6 +44,7 @@ export default function Home() {
           })}
         </Space>
       </Radio.Group>
+    </>
     console.log(">>>>>>>>>>>", messages);
     // axios.post(`http://127.0.0.1:5025/catalogaicopilot/get-product`, { question: value })
     axios.post(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/get-product`, { question: value })
@@ -143,13 +147,16 @@ export default function Home() {
         setMessages([...current_messages]);
         if (response.data.nextProduct) {
           current_messages.push(
-            { key: current_messages.length, data: "" },
+            { key: current_messages.length, data: response.data.nextProduct },
           );
-          axios.post(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/get-product`, { flag: 1 }).then((response) => {
-          // axios.post(`http://127.0.0.1:5025/catalogaicopilot/get-product`, { flag: 1 }).then((response) => {
-            const data = response.data.result.versions;
+          setMessages([...current_messages]);
+          axios.post(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/get-product`, { flag: 1 }).then((res) => {
+          // axios.post(`http://127.0.0.1:5025/catalogaicopilot/get-product`, { question: response.data.nextProduct, flag: 1 }).then((res) => {
+            const data = res.data.result.types;
             setData(data);
             let radio_jsx = 
+            <>
+              <Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What is the brand and types of {response.data.nextProduct}?</Box></Box>
               <Radio.Group defaultValue="a" buttonStyle="solid" onChange={onChange} value={value}>
                 <Space direction="vertical">
                   {data.map((value) => {
@@ -157,6 +164,7 @@ export default function Home() {
                   })}
                 </Space>
               </Radio.Group>
+            </>
             current_messages.push({ key: current_messages.length, data: radio_jsx });
             setMessages([...current_messages]);
           })
@@ -200,19 +208,24 @@ export default function Home() {
     axios.post(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/get-product`, { question })
     // axios.post(`http://127.0.0.1:5025/catalogaicopilot/get-product`, { question })
       .then(function (response) {
+        setMessage(response.data.currentProduct);
+        console.log("response~~~~~~~~~~~", response);
         let current_messages = messages;
         current_messages.pop();
         switch (response.data.isJSON) {
-          case 0:
-            setMessages((messages) => [
-                  ...current_messages,
-                  { key: current_messages.length, data: response.data.result },
-                ]);
-            break;
+          // case 0:
+          //   setMessages((messages) => [
+          //         ...current_messages,
+          //         { key: current_messages.length, data: response.data.result },
+          //       ]);
+          //   break;
           case 1:
-            const data = response.data.result.versions;
+            console.log("response.data....................", response.data);
+            const data = response.data.result.types;
             setData(data);
             let radio_jsx = 
+            <>
+              <Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What is the brand and types of {response.data.currentProduct}?</Box></Box>
               <Radio.Group defaultValue="a" buttonStyle="solid" onChange={onChange} value={value}>
                 <Space direction="vertical">
                   {data.map((value) => {
@@ -220,6 +233,7 @@ export default function Home() {
                   })}
                 </Space>
               </Radio.Group>
+            </>
             setMessages((messages) => [
               ...current_messages,
               { key: current_messages.length, data: radio_jsx },
