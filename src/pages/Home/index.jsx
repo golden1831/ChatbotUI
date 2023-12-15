@@ -176,7 +176,7 @@ export default function Home() {
       { key: messages.length, data: "" },
     );
     // axios.get(`http://127.0.0.1:5025/catalogaicopilot/api`).then(function (response) {
-      axios.post(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/get-product`).then(function (response) {
+      axios.post(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/api`).then(function (response) {
       console.log("response===.", response);
       setMessages((messages) => [
         ...current_messages,
