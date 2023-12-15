@@ -4,7 +4,7 @@ import { Input, IconButton } from "@chakra-ui/react";
 import { useDisclosure } from "@chakra-ui/react";
 import { ChatIcon } from "@chakra-ui/icons";
 
-import { Radio, Space, message } from 'antd';
+import { Button, Radio, Space, message } from 'antd';
 
 import EmbedModal from "../../components/EmbedModal";
 import Message from "../../components/Message";
@@ -14,6 +14,7 @@ import "./Home.css";
 import axios from "axios";
 
 import { useEffect, useRef, useState } from "react";
+import { eventWrapper } from "@testing-library/user-event/dist/utils";
 
 let is_loading = false;
 
@@ -22,6 +23,7 @@ export default function Home() {
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState("");
+  const [flag, setFlag] = useState(0);
 
   const [value, setValue] = useState("");
   const [disable, setDisable] = useState(false);
@@ -32,145 +34,177 @@ export default function Home() {
     setDisable(true);
   };
 
+  const generateProductElements = (radio_jsx, response, flag) => {
+
+    const categorize = <><Box textAlign={'center'}><Box as="h3" fontWeight={'bold'} fontSize={'18px'}>Drinks or Foods or Others?</Box><span>{response.data.categorization}</span></Box></>
+    const pType = <><Box textAlign={'center'}><Box as="h3" fontWeight={'bold'} fontSize={'18px'}>Sinlge product or Multi product?</Box><span>{ response.data.pType}</span></Box></>
+    const formFactor = response.data.formFactor;
+    const formFactorData = <><Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>Form Foctors about product</Box><table className="chat_table">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Unit</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Beer Glass</td>
+          <td>{formFactor.BeerGlass}</td>
+        </tr>
+        <tr>
+        <td>Wine Glass</td>
+          <td>{formFactor.WineGlass}</td>
+        </tr>
+        <tr>
+        <td>Paper Cup</td>
+          <td>{formFactor.PaperCup}</td>
+        </tr>
+      </tbody>
+    </table></Box></>
+    let suggestedData = response.data.suggestedProductTitle;
+    let suggestedData_jsx = <><Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>Suggested Product Title Based on the location</Box><table className="chat_table">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Title</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Local Name</td>
+        <td>{suggestedData.localname}</td>
+      </tr>
+      <tr>
+      <td>International Recognized Brand</td>
+        <td>{suggestedData.internationalrecognizedbrand}</td>
+      </tr>
+      <tr>
+      <td>Colloquial/Popular terms</td>
+        <td>{suggestedData.colloquial}</td>
+      </tr>
+      <tr>
+      <td>Additional Relevant Name</td>
+      <td>{suggestedData.additionalrelevantnames}</td>
+      </tr>
+    </tbody>
+    </table></Box></>
+
+    let pData = response.data.productDetail;
+    let data = [];
+    Object.keys(pData).map(item =>  data.push({ key: item, data: pData[item] }))
+    let pData_jsx = <><Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>Product Details</Box>{data.map((item, index) => item.key !== 'image' ? (<p key={index}><b style={{ textTransform: 'uppercase' }}>{item.key}: </b><span>{item.data}</span></p>): (<Box display={'flex'} flexDirection={'column'} gap={'10px'} justifyContent={'center'} alignItems={'center'}>{item?.data?.map((item) => <img src={item} alt="" width={'100px'} height={'100px'} />)}</Box>) )}</Box></>
+    let current_messages = messages;
+    if(flag === 1) {
+      current_messages = [
+        ...messages.slice(0, -1),
+        { key: messages.length - 1, data: radio_jsx },
+        { key: messages.length, data: value }
+      ];
+    } else {
+      current_messages.push(
+        { key: current_messages.length, data: ""}
+      );
+    }
+    current_messages.push(
+      { key: messages.length + 1, data: categorize },
+    );
+    current_messages.push(
+      { key: messages.length + 2, data: "" },
+    );
+    current_messages.push(
+      { key: messages.length + 3, data: pType },
+    );
+    current_messages.push(
+      { key: messages.length + 4, data: "" },
+    );
+    current_messages.push(
+      { key: messages.length + 5, data: formFactorData },
+    );
+    current_messages.push(
+      { key: messages.length + 6, data: "" },
+    );
+    current_messages.push(
+      { key: messages.length + 7, data: suggestedData_jsx },
+    );
+    current_messages.push(
+      { key: messages.length + 8, data: "" },
+    );
+    current_messages.push(
+      { key: messages.length + 9, data: pData_jsx },
+    );
+    current_messages.push(
+      { key: messages.length + 10, data: ""}
+    );
+    setMessages([...current_messages]);
+
+    if (flag === 0) {
+      current_messages.push(
+        { key: current_messages.length, data: ""}
+      );
+    }
+    
+    let last_message = `Thank you. The ${response.data.currentProduct} will be added.`;
+    if (response.data.nextProduct) {
+      setFlag(1);
+      last_message += `What types of ${response.data.nextProduct} you want to offer? You can select multiple product.`;
+        let radio_jsx = 
+        <>
+          <Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What is the brand and type of {response.data.nextProduct}?</Box></Box>
+        </>
+        current_messages.push(
+          { key: current_messages.length, data: last_message}
+        )
+        current_messages.push(
+          { key: current_messages.length, data: ""}
+        );
+        current_messages.push({ key: current_messages.length, data: radio_jsx });
+        setMessages([...current_messages]);
+    } else {
+      setFlag(0)
+      current_messages.push(
+        { key: current_messages.length, data: last_message}
+      )
+      setMessages([...current_messages]);
+    }
+    is_loading = false;
+    setQuestion("");
+  }
+
+  useEffect(() => {
+    let current_messages = messages;
+    current_messages.push(
+      { key: messages.length, data: "" },
+    );
+    // axios.get(`http://127.0.0.1:5025/catalogaicopilot/api`).then(function (response) {
+      axios.post(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/get-product`).then(function (response) {
+      console.log("response===.", response);
+      setMessages((messages) => [
+        ...current_messages,
+        { key: current_messages.length, data: response.data },
+      ]);
+    })
+  }, []);
+
   useEffect(() => {
     if(!messages.length) return;
+  
     let radio_jsx = 
-    <>
-      <Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What is the brand and types of {message}?</Box></Box>
-      <Radio.Group defaultValue="a" buttonStyle="solid" onChange={onChange} value={value}>
-        <Space direction="vertical">
-          {data.map((value) => {
-            return <Radio.Button value={value}>{value}</Radio.Button>
-          })}
-        </Space>
-      </Radio.Group>
-    </>
-    console.log(">>>>>>>>>>>", messages);
-    // axios.post(`http://127.0.0.1:5025/catalogaicopilot/get-product`, { question: value })
-    axios.post(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/get-product`, { question: value })
+      <>
+        <Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What is the brand and types of {message}?</Box></Box>
+        <Radio.Group defaultValue="a" buttonStyle="solid" onChange={onChange} value={value}>
+          <Space direction="vertical">
+            {data.map((value) => {
+              return <Radio.Button value={value}>{value}</Radio.Button>
+            })}
+          </Space>
+        </Radio.Group>
+      </>
+
+    // axios.post(`http://127.0.0.1:5025/catalogaicopilot/get-product`, { question: value, flag: flag })
+    axios.post(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/get-product`, { question: value, flag: flag })
       .then(function (response) {
-        const categorize = <><Box textAlign={'center'}><Box as="h3" fontWeight={'bold'} fontSize={'18px'}>Drinks or Foods or Others?</Box><span>{response.data.categorization}</span></Box></>
-
-        const pType = <><Box textAlign={'center'}><Box as="h3" fontWeight={'bold'} fontSize={'18px'}>Sinlge product or Multi product?</Box><span>{ response.data.pType}</span></Box></>
-
-        const formFactor = response.data.formFactor;
-        const formFactorData = <><Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>Form Foctors about product</Box><table className="chat_table">
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th>Unit</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Beer Glass</td>
-              <td>{formFactor.BeerGlass}</td>
-            </tr>
-            <tr>
-            <td>Wine Glass</td>
-              <td>{formFactor.WineGlass}</td>
-            </tr>
-            <tr>
-            <td>Paper Cup</td>
-              <td>{formFactor.PaperCup}</td>
-            </tr>
-          </tbody>
-        </table></Box></>
-
-        let suggestedData = response.data.suggestedProductTitle;
-        // let current_messages;
-        let suggestedData_jsx = <><Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>Suggested Product Title Based on the location</Box><table className="chat_table">
-        <thead>
-          <tr>
-            <th>Type</th>
-            <th>Title</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Local Name</td>
-            <td>{suggestedData.localname}</td>
-          </tr>
-          <tr>
-          <td>International Recognized Brand</td>
-            <td>{suggestedData.internationalrecognizedbrand}</td>
-          </tr>
-          <tr>
-          <td>Colloquial/Popular terms</td>
-            <td>{suggestedData.colloquial}</td>
-          </tr>
-          <tr>
-          <td>Additional Relevant Name</td>
-          <td>{suggestedData.additionalrelevantnames}</td>
-          </tr>
-        </tbody>
-        </table></Box></>
-
-        let pData = response.data.productDetail;
-
-        let data = [];
-        Object.keys(pData).map(item =>  data.push({ key: item, data: pData[item] }))
-        let pData_jsx = <><Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>Product Details</Box>{data.map((item, index) => item.key !== 'image' ? (<p key={index}><b style={{ textTransform: 'uppercase' }}>{item.key}: </b><span>{item.data}</span></p>): (<Box display={'flex'} flexDirection={'column'} gap={'10px'} justifyContent={'center'} alignItems={'center'}>{item?.data?.map((item) => <img src={item} alt="" width={'100px'} height={'100px'} />)}</Box>) )}</Box></>
-        let current_messages = [
-          ...messages.slice(0, -1),
-          { key: messages.length - 1, data: radio_jsx },
-          { key: messages.length, data: value }
-        ];
-        current_messages.push(
-          { key: messages.length + 1, data: categorize },
-        );
-        current_messages.push(
-          { key: messages.length + 2, data: "" },
-        );
-        current_messages.push(
-          { key: messages.length + 3, data: pType },
-        );
-        current_messages.push(
-          { key: messages.length + 4, data: "" },
-        );
-        current_messages.push(
-          { key: messages.length + 5, data: formFactorData },
-        );
-        current_messages.push(
-          { key: messages.length + 6, data: "" },
-        );
-        current_messages.push(
-          { key: messages.length + 7, data: suggestedData_jsx },
-        );
-        current_messages.push(
-          { key: messages.length + 8, data: "" },
-        );
-        current_messages.push(
-          { key: messages.length + 9, data: pData_jsx },
-        );
-        console.log("1>>>", current_messages);
-        setMessages([...current_messages]);
-        if (response.data.nextProduct) {
-          current_messages.push(
-            { key: current_messages.length, data: response.data.nextProduct },
-          );
-          setMessages([...current_messages]);
-          axios.post(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/get-product`, { flag: 1 }).then((res) => {
-          // axios.post(`http://127.0.0.1:5025/catalogaicopilot/get-product`, { question: response.data.nextProduct, flag: 1 }).then((res) => {
-            const data = res.data.result.types;
-            setData(data);
-            let radio_jsx = 
-            <>
-              <Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What is the brand and types of {response.data.nextProduct}?</Box></Box>
-              <Radio.Group defaultValue="a" buttonStyle="solid" onChange={onChange} value={value}>
-                <Space direction="vertical">
-                  {data.map((value) => {
-                    return <Radio.Button value={value}>{value}</Radio.Button>
-                  })}
-                </Space>
-              </Radio.Group>
-            </>
-            current_messages.push({ key: current_messages.length, data: radio_jsx });
-            setMessages([...current_messages]);
-          })
-        }
-        is_loading = false;
-        setQuestion("");
+        console.log("here~~", response);
+        generateProductElements(radio_jsx, response, 1);
       })
       .catch(function (error) {
         return error;
@@ -200,32 +234,58 @@ export default function Home() {
     ]);
   };
 
+  const getMore = (button) => {
+    console.log(button);
+    if (button && button.previousElementSibling) {
+      // Get the previous sibling of the button, which is the container with the ant-space class
+      var spaceDiv = button.previousElementSibling;
+      console.log(spaceDiv);
+      // Get all the ant-space-item elements within the container
+      var items = spaceDiv.querySelectorAll('.ant-space-item');
+  
+      // Make sure items were found
+      if (items.length) {
+        // Calculate the index to start hiding/showing from
+        var halfIndex = Math.ceil(items.length / 2);
+  
+        // Loop through the last half of the items
+        for (var i = halfIndex; i < items.length; i++) {
+          // Toggle the display style
+          items[i].style.display = items[i].style.display === 'none' ? '' : 'none';
+        }
+      }
+    }
+  }
+
   useEffect(() => {
     if (question === "") return;
 
     req_qa_box.current.scrollTop = req_qa_box.current.scrollHeight;
 
-    axios.post(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/get-product`, { question })
-    // axios.post(`http://127.0.0.1:5025/catalogaicopilot/get-product`, { question })
+    axios.post(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/get-product`, { question: question, flag: flag })
+    // axios.post(`http://127.0.0.1:5025/catalogaicopilot/get-product`, { question: question, flag: flag })
       .then(function (response) {
         setMessage(response.data.currentProduct);
         console.log("response~~~~~~~~~~~", response);
         let current_messages = messages;
         current_messages.pop();
         switch (response.data.isJSON) {
-          // case 0:
-          //   setMessages((messages) => [
-          //         ...current_messages,
-          //         { key: current_messages.length, data: response.data.result },
-          //       ]);
-          //   break;
           case 1:
+            let text_jsx = 
+              <Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What is the brand and types of {response.data.currentProduct}?</Box></Box>
+            setMessages((messages) => [
+              ...current_messages,
+              { key: current_messages.length, data: text_jsx },
+            ]);
+            break;
+          case 2:
             console.log("response.data....................", response.data);
             const data = response.data.result.types;
             setData(data);
+
             let radio_jsx = 
             <>
-              <Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What is the brand and types of {response.data.currentProduct}?</Box></Box>
+              <Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What types of {response.data.currentProduct}?</Box></Box>
               <Radio.Group defaultValue="a" buttonStyle="solid" onChange={onChange} value={value}>
                 <Space direction="vertical">
                   {data.map((value) => {
@@ -233,33 +293,19 @@ export default function Home() {
                   })}
                 </Space>
               </Radio.Group>
+              <Button className="more_btn" onClick={() => getMore(this)} type="dashed" danger style={{ display: 'block', marginTop: '10px' }}>+ more</Button>
             </>
             setMessages((messages) => [
               ...current_messages,
               { key: current_messages.length, data: radio_jsx },
             ]);
             break;
-        
+          case 3: 
+            generateProductElements(<></>, response, 0);
+            break;
           default:
             break;
         }
-
-        // if( response.data.isJSON ){
-        //   setMessages((messages) => [
-        //     ...current_messages,
-        //     { key: current_messages.length, data: response.data.result },
-        //   ]);
-        // } else {
-        //   let response_data = JSON.parse(response.data.result);
-        //   let data = [];
-        //   Object.keys(response_data).map(item =>  data.push({ key: item, data: response_data[item] }))
-        //   let response_jsx = <>{data.map((item, index) => item.key !== 'image' ? (<p key={index}><b style={{ textTransform: 'uppercase' }}>{item.key}: </b><span>{item.data}</span></p>): (<p key={index}><b style={{ textTransform: 'uppercase' }}>{item.key}: </b><div>{item.data.join("$")}</div></p>) )}</>
-        //   setMessages((messages) => [
-        //     ...current_messages,
-        //     { key: current_messages.length, data: response_jsx  },
-        //   ]);
-        // }      
-        
         is_loading = false;
         setQuestion("");
       })
