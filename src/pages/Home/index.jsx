@@ -4,7 +4,7 @@ import { Input, IconButton } from "@chakra-ui/react";
 import { useDisclosure } from "@chakra-ui/react";
 import { ChatIcon } from "@chakra-ui/icons";
 
-import { Button, Radio, Space, message } from 'antd';
+import { Button, Radio, Space } from 'antd';
 
 import EmbedModal from "../../components/EmbedModal";
 import Message from "../../components/Message";
@@ -14,7 +14,16 @@ import "./Home.css";
 import axios from "axios";
 
 import { useEffect, useRef, useState } from "react";
-import { eventWrapper } from "@testing-library/user-event/dist/utils";
+
+import {v4 as uuid4} from 'uuid';
+
+
+let transactionId = localStorage.getItem('X-Transaction-ID');
+
+if(!transactionId) {
+  transactionId = uuid4();
+  localStorage.setItem('X-Transaction-ID', transactionId);
+}
 
 let is_loading = false;
 
@@ -28,6 +37,59 @@ export default function Home() {
   const [value, setValue] = useState("");
   const [disable, setDisable] = useState(false);
   const [data, setData] = useState([]);
+
+  useEffect(() => {
+    let current_messages = messages;
+    current_messages.push(
+      { key: messages.length, data: "" },
+    );
+
+    // axios.get('http://127.0.0.1:5025/catalogaicopilot/api', {
+      axios.get(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/api`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-transaction-id': transactionId
+      }}
+    )
+    .then(function (response) {
+      console.log("response===.", response);
+      setMessages((messages) => [
+        ...current_messages,
+        { key: current_messages.length, data: response.data },
+      ]);
+    });
+  }, []);
+
+  useEffect(() => {
+    if(!messages.length) return;
+  
+    let radio_jsx = 
+      <>
+        <Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What is the brand and types of {message}?</Box></Box>
+        <Radio.Group defaultValue="a" buttonStyle="solid" onChange={onChange} value={value}>
+          <Space direction="vertical">
+            {data.map((value) => {
+              return <Radio.Button value={value}>{value}</Radio.Button>
+            })}
+          </Space>
+        </Radio.Group>
+      </>
+
+    // axios.post(`http://127.0.0.1:5025/catalogaicopilot/get-product`, { question: value, flag: flag }, {
+    axios.post(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/get-product`, { question: value, flag: flag }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-transaction-id': transactionId
+      }
+    })
+    .then(function (response) {
+      console.log("here~~", response);
+      generateProductElements(radio_jsx, response, 1);
+    })
+    .catch(function (error) {
+      return error;
+    });
+  }, [value])
 
   const onChange = (e) => {
     setValue(e.target.value);
@@ -170,47 +232,6 @@ export default function Home() {
     setQuestion("");
   }
 
-  useEffect(() => {
-    let current_messages = messages;
-    current_messages.push(
-      { key: messages.length, data: "" },
-    );
-    // axios.get(`http://127.0.0.1:5025/catalogaicopilot/api`).then(function (response) {
-      axios.get(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/api`).then(function (response) {
-      console.log("response===.", response);
-      setMessages((messages) => [
-        ...current_messages,
-        { key: current_messages.length, data: response.data },
-      ]);
-    })
-  }, []);
-
-  useEffect(() => {
-    if(!messages.length) return;
-  
-    let radio_jsx = 
-      <>
-        <Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What is the brand and types of {message}?</Box></Box>
-        <Radio.Group defaultValue="a" buttonStyle="solid" onChange={onChange} value={value}>
-          <Space direction="vertical">
-            {data.map((value) => {
-              return <Radio.Button value={value}>{value}</Radio.Button>
-            })}
-          </Space>
-        </Radio.Group>
-      </>
-
-    // axios.post(`http://127.0.0.1:5025/catalogaicopilot/get-product`, { question: value, flag: flag })
-    axios.post(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/get-product`, { question: value, flag: flag })
-      .then(function (response) {
-        console.log("here~~", response);
-        generateProductElements(radio_jsx, response, 1);
-      })
-      .catch(function (error) {
-        return error;
-      });
-  }, [value])
-
   const req_qa_box = useRef(null);
 
   const handleQuestionUpdated = (event) => {
@@ -234,90 +255,73 @@ export default function Home() {
     ]);
   };
 
-  const getMore = (button) => {
-    console.log(button);
-    if (button && button.previousElementSibling) {
-      // Get the previous sibling of the button, which is the container with the ant-space class
-      var spaceDiv = button.previousElementSibling;
-      console.log(spaceDiv);
-      // Get all the ant-space-item elements within the container
-      var items = spaceDiv.querySelectorAll('.ant-space-item');
-  
-      // Make sure items were found
-      if (items.length) {
-        // Calculate the index to start hiding/showing from
-        var halfIndex = Math.ceil(items.length / 2);
-  
-        // Loop through the last half of the items
-        for (var i = halfIndex; i < items.length; i++) {
-          // Toggle the display style
-          items[i].style.display = items[i].style.display === 'none' ? '' : 'none';
-        }
-      }
-    }
-  }
 
   useEffect(() => {
     if (question === "") return;
 
     req_qa_box.current.scrollTop = req_qa_box.current.scrollHeight;
 
-    axios.post(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/get-product`, { question: question, flag: flag })
-    // axios.post(`http://127.0.0.1:5025/catalogaicopilot/get-product`, { question: question, flag: flag })
-      .then(function (response) {
-        setMessage(response.data.currentProduct);
-        console.log("response~~~~~~~~~~~", response);
-        let current_messages = messages;
-        current_messages.pop();
-        switch (response.data.isJSON) {
-          case 0:
-            setMessages((messages) => [
-              ...current_messages,
-              { key: current_messages.length, data: response.data.result },
-            ]);
+    axios.post(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/get-product`, { question: question, flag: flag }, {
+    // axios.post(`http://127.0.0.1:5025/catalogaicopilot/get-product`, { question: question, flag: flag }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-transaction-id': transactionId
+      }
+    })
+    .then(function (response) {
+      setMessage(response.data.currentProduct);
+      console.log("response~~~~~~~~~~~", response);
+      let current_messages = messages;
+      current_messages.pop();
+      switch (response.data.isJSON) {
+        case 0:
+          setMessages((messages) => [
+            ...current_messages,
+            { key: current_messages.length, data: response.data.result },
+          ]);
+        break;
+        case 1:
+          let text_jsx = 
+            <Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What is the brand and types of {response.data.currentProduct}?</Box></Box>
+          setMessages((messages) => [
+            ...current_messages,
+            { key: current_messages.length, data: text_jsx },
+          ]);
           break;
-          case 1:
-            let text_jsx = 
-              <Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What is the brand and types of {response.data.currentProduct}?</Box></Box>
-            setMessages((messages) => [
-              ...current_messages,
-              { key: current_messages.length, data: text_jsx },
-            ]);
-            break;
-          case 2:
-            console.log("response.data....................", response.data);
-            const data = response.data.result.types;
-            setData(data);
+        case 2:
+          console.log("response.data....................", response.data);
+          const data = response.data.result.types;
+          setData(data);
 
-            let radio_jsx = 
-            <>
-              <Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What types of {response.data.currentProduct}?</Box></Box>
-              <Radio.Group defaultValue="a" buttonStyle="solid" onChange={onChange} value={value}>
-                <Space direction="vertical">
-                  {data.map((value) => {
-                    return <Radio.Button value={value}>{value}</Radio.Button>
-                  })}
-                </Space>
-              </Radio.Group>
-              <Button className="more_btn" onClick={() => getMore(this)} type="dashed" danger style={{ display: 'block', marginTop: '10px' }}>+ more</Button>
-            </>
-            setMessages((messages) => [
-              ...current_messages,
-              { key: current_messages.length, data: radio_jsx },
-            ]);
-            break;
-          case 3: 
-            generateProductElements(<></>, response, 0);
-            break;
-          default:
-            break;
-        }
-        is_loading = false;
-        setQuestion("");
-      })
-      .catch(function (error) {
-        return error;
-      });
+          let radio_jsx = 
+          <>
+            <Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What types of {response.data.currentProduct}?</Box></Box>
+            <Radio.Group defaultValue="a" buttonStyle="solid" onChange={onChange} value={value}>
+              <Space direction="vertical">
+                {data.map((value) => {
+                  return <Radio.Button value={value}>{value}</Radio.Button>
+                })}
+              </Space>
+            </Radio.Group>
+            <Button className="more_btn" type="dashed" danger style={{ display: 'block', marginTop: '10px' }}>+ more</Button>
+          </>
+          setMessages((messages) => [
+            ...current_messages,
+            { key: current_messages.length, data: radio_jsx },
+          ]);
+          break;
+        case 3: 
+          generateProductElements(<></>, response, 0);
+          break;
+        default:
+          break;
+      }
+      is_loading = false;
+      setQuestion("");
+    })
+    .catch(function (error) {
+      return error;
+    });
   }, [messages.length]);
 
   return (
