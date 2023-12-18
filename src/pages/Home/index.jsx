@@ -270,6 +270,12 @@ export default function Home() {
         let current_messages = messages;
         current_messages.pop();
         switch (response.data.isJSON) {
+          case 0:
+            setMessages((messages) => [
+              ...current_messages,
+              { key: current_messages.length, data: response.data.result },
+            ]);
+          break;
           case 1:
             let text_jsx = 
               <Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What is the brand and types of {response.data.currentProduct}?</Box></Box>
