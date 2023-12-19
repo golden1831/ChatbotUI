@@ -100,8 +100,9 @@ export default function Home() {
 
     const categorize = <><Box textAlign={'center'}><Box as="h3" fontWeight={'bold'} fontSize={'18px'}>Drinks or Foods or Others?</Box><span>{response.data.categorization}</span></Box></>
     const pType = <><Box textAlign={'center'}><Box as="h3" fontWeight={'bold'} fontSize={'18px'}>Sinlge product or Multi product?</Box><span>{ response.data.pType}</span></Box></>
-    const formFactor = response.data.formFactor;
+    const formFactor = response.data.formFactor.factors;
     const formFactorData = <><Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>Form Foctors about product</Box><table className="chat_table">
+
       <thead>
         <tr>
           <th>Type</th>
@@ -109,18 +110,12 @@ export default function Home() {
         </tr>
       </thead>
       <tbody>
-        <tr>
-          <td>Beer Glass</td>
-          <td>{formFactor.BeerGlass}</td>
-        </tr>
-        <tr>
-        <td>Wine Glass</td>
-          <td>{formFactor.WineGlass}</td>
-        </tr>
-        <tr>
-        <td>Paper Cup</td>
-          <td>{formFactor.PaperCup}</td>
-        </tr>
+        {formFactor.map((item) => 
+          <tr>
+            <td>{item.container}</td>
+            <td>{item.volume}</td>
+          </tr>
+        )}
       </tbody>
     </table></Box></>
     let suggestedData = response.data.suggestedProductTitle;
