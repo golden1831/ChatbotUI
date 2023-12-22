@@ -35,8 +35,9 @@ export default function Home() {
   const [flag, setFlag] = useState(0);
 
   const [value, setValue] = useState("");
-  const [disable, setDisable] = useState(false);
-  const [data, setData] = useState([]);
+  const [inputStateDisable, setInputStateDisable] = useState(false);
+  const [typeData, setTypeData] = useState([]);
+  const [brandData, setBrandData] = useState([]);
 
   useEffect(() => {
     let current_messages = messages;
@@ -53,7 +54,7 @@ export default function Home() {
     )
     .then(function (response) {
       console.log("response===.", response);
-      setMessages((messages) => [
+      setMessages((messages) => [ 
         ...current_messages,
         { key: current_messages.length, data: response.data },
       ]);
@@ -68,9 +69,10 @@ export default function Home() {
         <Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What is the brand and types of {message}?</Box></Box>
         <Radio.Group defaultValue="a" buttonStyle="solid" onChange={onChange} value={value}>
           <Space direction="vertical">
-            {data.map((value) => {
+            {typeData.map((value) => {
               return <Radio.Button value={value}>{value}</Radio.Button>
             })}
+            <Radio.Button value={"No list"} style={{ borderColor: 'red' }}>No list</Radio.Button>
           </Space>
         </Radio.Group>
       </>
@@ -83,6 +85,7 @@ export default function Home() {
       }
     })
     .then(function (response) {
+      
       console.log("here~~", response);
       generateProductElements(radio_jsx, response, 1);
     })
@@ -93,13 +96,36 @@ export default function Home() {
 
   const onChange = (e) => {
     setValue(e.target.value);
-    setDisable(true);
+    if(e.target.value !== "No list") {
+      is_loading = true;
+        // setQuestion(e.target.value);
+      setMessages((messages) => [
+        ...messages,
+        { key: messages.length, data: e.target.value },
+        { key: messages.length + 1, data: "..." },
+      ]);
+    }
+    setInputStateDisable(false);
   };
+
+  const onChangeBrand = (e) => {
+    console.log(e.target.value);
+    if (e.target.value !== "No list") {
+      is_loading = true;
+      setQuestion(e.target.value);
+      setMessages((messages) => [
+        ...messages,
+        { key: messages.length, data: e.target.value },
+        { key: messages.length + 1, data: "..." },
+      ]);
+    } 
+    setInputStateDisable(false);
+  }
 
   const generateProductElements = (radio_jsx, response, flag) => {
 
     const categorize = <><Box textAlign={'center'}><Box as="h3" fontWeight={'bold'} fontSize={'18px'}>Drinks or Foods or Others?</Box><span>{response.data.categorization}</span></Box></>
-    const pType = <><Box textAlign={'center'}><Box as="h3" fontWeight={'bold'} fontSize={'18px'}>Sinlge product or Multi product?</Box><span>{ response.data.pType}</span></Box></>
+    const pType = <><Box textAlign={'center'}><Box as="h3" fontWeight={'bold'} fontSize={'18px'}>Single product or Multi product?</Box><span>{ response.data.pType}</span></Box></>
     const formFactor = response.data.formFactor.factors;
     const formFactorData = <><Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>Form Foctors about product</Box><table className="chat_table">
 
@@ -154,8 +180,8 @@ export default function Home() {
     if(flag === 1) {
       current_messages = [
         ...messages.slice(0, -1),
-        { key: messages.length - 1, data: radio_jsx },
-        { key: messages.length, data: value }
+        // { key: messages.length - 1, data: radio_jsx },
+        // { key: messages.length, data: value }
       ];
     } else {
       current_messages.push(
@@ -202,20 +228,32 @@ export default function Home() {
     
     let last_message = `Thank you. The ${response.data.currentProduct} will be added.`;
     if (response.data.nextProduct) {
+      setInputStateDisable(true);
       setFlag(1);
       last_message += `What types of ${response.data.nextProduct} you want to offer? You can select multiple product.`;
-        let radio_jsx = 
-        <>
-          <Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What is the brand and type of {response.data.nextProduct}?</Box></Box>
-        </>
-        current_messages.push(
-          { key: current_messages.length, data: last_message}
-        )
-        current_messages.push(
-          { key: current_messages.length, data: ""}
-        );
-        current_messages.push({ key: current_messages.length, data: radio_jsx });
-        setMessages([...current_messages]);
+      
+      const brandData = response.data.result.brands;
+      setBrandData(brandData);
+      let radio_jsx = 
+      <>
+        <Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What is the brand and type of {response.data.nextProduct}?</Box></Box>
+        <Radio.Group defaultValue="a" buttonStyle="solid" onChange={onChangeBrand} value={value}>
+          <Space direction="vertical">
+            {brandData.map((value) => {
+              return <Radio.Button value={value}>{value}</Radio.Button>
+            })}
+            <Radio.Button value={"No list"} style={{ borderColor: 'red' }}>No list</Radio.Button>
+          </Space>
+        </Radio.Group>
+      </>
+      current_messages.push(
+        { key: current_messages.length, data: last_message}
+      )
+      current_messages.push(
+        { key: current_messages.length, data: ""}
+      );
+      current_messages.push({ key: current_messages.length, data: radio_jsx });
+      setMessages([...current_messages]);
     } else {
       setFlag(0)
       current_messages.push(
@@ -252,6 +290,7 @@ export default function Home() {
 
 
   useEffect(() => {
+    console.log("API call");
     if (question === "") return;
 
     req_qa_box.current.scrollTop = req_qa_box.current.scrollHeight;
@@ -276,26 +315,41 @@ export default function Home() {
           ]);
         break;
         case 1:
+          setInputStateDisable(true);
+          console.log("response.data................", response.data);
+          const brandData = response.data.result.brands;
+          setBrandData(brandData);
           let text_jsx = 
-            <Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What is the brand and types of {response.data.currentProduct}?</Box></Box>
+            <><Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What is the brand and types of {response.data.currentProduct}?</Box></Box>
+            <Radio.Group defaultValue="a" buttonStyle="solid" onChange={onChangeBrand} value={value}>
+              <Space direction="vertical">
+                {brandData.map((value) => {
+                  return <Radio.Button value={value}>{value}</Radio.Button>
+                })}
+                <Radio.Button value={"No list"} style={{ borderColor: 'red' }}>No list</Radio.Button>
+              </Space>
+            </Radio.Group>
+            </>
           setMessages((messages) => [
             ...current_messages,
             { key: current_messages.length, data: text_jsx },
           ]);
           break;
         case 2:
+          setInputStateDisable(true);
           console.log("response.data....................", response.data);
-          const data = response.data.result.types;
-          setData(data);
+          const typeData = response.data.result.types;
+          setTypeData(typeData);
 
           let radio_jsx = 
           <>
             <Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What types of {response.data.currentProduct}?</Box></Box>
             <Radio.Group defaultValue="a" buttonStyle="solid" onChange={onChange} value={value}>
               <Space direction="vertical">
-                {data.map((value) => {
+                {typeData.map((value) => {
                   return <Radio.Button value={value}>{value}</Radio.Button>
                 })}
+                <Radio.Button value={"No list"} style={{ borderColor: 'red' }}>No list</Radio.Button>
               </Space>
             </Radio.Group>
             <Button className="more_btn" type="dashed" danger style={{ display: 'block', marginTop: '10px' }}>+ more</Button>
@@ -315,6 +369,7 @@ export default function Home() {
       setQuestion("");
     })
     .catch(function (error) {
+      setQuestion("");
       return error;
     });
   }, [messages.length]);
@@ -370,6 +425,7 @@ export default function Home() {
               height={"50px"}
               marginRight={"10px"}
               value={question}
+              disabled={inputStateDisable}
               onChange={handleQuestionChange}
               onKeyDown={handleQuestionUpdated}
             />
