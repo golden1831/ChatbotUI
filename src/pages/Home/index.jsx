@@ -85,8 +85,6 @@ export default function Home() {
       }
     })
     .then(function (response) {
-      
-      console.log("here~~", response);
       generateProductElements(radio_jsx, response, 1);
     })
     .catch(function (error) {
@@ -337,7 +335,6 @@ export default function Home() {
           break;
         case 2:
           setInputStateDisable(true);
-          console.log("response.data....................", response.data);
           const typeData = response.data.result.types;
           setTypeData(typeData);
 
@@ -361,6 +358,76 @@ export default function Home() {
           break;
         case 3: 
           generateProductElements(<></>, response, 0);
+          break;
+        case 4:
+          console.log("food response.data---->", response.data);
+          const dishName = response.data.dishName;
+
+          const categorize = <><Box textAlign={'center'}><Box as="h3" fontWeight={'bold'} fontSize={'18px'}>Drinks or Foods or Others?</Box><span>{response.data.categorization}</span></Box></>
+
+          let suggestedData = response.data.suggestedProductTitle;
+          let suggestedData_jsx = <><Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>Suggested Product Title Based on the location</Box><table className="chat_table">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Title</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Local Name</td>
+              <td>{suggestedData.localname}</td>
+            </tr>
+            <tr>
+            <td>International Recognized Brand</td>
+              <td>{suggestedData.internationalrecognizedbrand}</td>
+            </tr>
+            <tr>
+            <td>Colloquial/Popular terms</td>
+              <td>{suggestedData.colloquial}</td>
+            </tr>
+            <tr>
+            <td>Additional Relevant Name</td>
+            <td>{suggestedData.additionalrelevantnames}</td>
+            </tr>
+          </tbody>
+          </table></Box></>
+
+          let pData = response.data.productDetail;
+          let data = [];
+          Object.keys(pData).map(item =>  data.push({ key: item, data: pData[item] }))
+          let pData_jsx = <><Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>Product Details</Box>{data.map((item, index) => item.key !== 'image' ? (<p key={index}><b style={{ textTransform: 'uppercase' }}>{item.key}: </b><span>{item.data}</span></p>): (<Box display={'flex'} flexDirection={'column'} gap={'10px'} justifyContent={'center'} alignItems={'center'}>{item?.data?.map((item) => <img src={item} alt="" width={'100px'} height={'100px'} />)}</Box>) )}</Box></>
+          current_messages.push(
+            { key: current_messages.length, data: ""}
+          );
+          current_messages.push(
+            { key: messages.length + 1, data: categorize },
+          );
+          current_messages.push(
+            { key: current_messages.length + 2, data: ""}
+          );
+          current_messages.push(
+            { key: messages.length + 3, data: suggestedData_jsx },
+          );
+          current_messages.push(
+            { key: current_messages.length + 4, data: ""}
+          );
+          current_messages.push(
+            { key: messages.length + 5, data: pData_jsx },
+          );
+          current_messages.push(
+            { key: current_messages.length + 6, data: ""}
+          );
+
+          const last_message = `Thank you. The ${dishName} will be added.`;
+
+          current_messages.push(
+            { key: current_messages.length + 7, data: last_message}
+          )
+          current_messages.push(
+            { key: current_messages.length + 8, data: ""}
+          );
+          setMessages([...current_messages]);
           break;
         default:
           break;
