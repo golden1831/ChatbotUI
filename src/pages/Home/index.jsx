@@ -1,31 +1,29 @@
+import { useEffect, useRef, useState } from "react";
+import axios from "axios";
+import {v4 as uuid4} from 'uuid';
+
 import { Text, Flex, Box, Spacer } from "@chakra-ui/react";
 import { Card } from "@chakra-ui/react";
 import { Input, IconButton } from "@chakra-ui/react";
 import { useDisclosure } from "@chakra-ui/react";
 import { ChatIcon } from "@chakra-ui/icons";
 
-import { Button, Radio, Space } from 'antd';
-
 import EmbedModal from "../../components/EmbedModal";
 import Message from "../../components/Message";
+import RadioCard from "../../components/Elements/RadioCard";
+import FormFactor from "../../components/Elements/FormFactor";
+import SuggestedData from "../../components/Elements/SuggestedData";
+import ProductDetail from "../../components/Elements/ProductDetail";
 
 import "./Home.css";
 
-import axios from "axios";
-
-import { useEffect, useRef, useState } from "react";
-
-import {v4 as uuid4} from 'uuid';
-
-
+let is_loading = false;
 let transactionId = localStorage.getItem('X-Transaction-ID');
 
 if(!transactionId) {
   transactionId = uuid4();
   localStorage.setItem('X-Transaction-ID', transactionId);
 }
-
-let is_loading = false;
 
 export default function Home() {
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -37,7 +35,6 @@ export default function Home() {
   const [value, setValue] = useState("");
   const [inputStateDisable, setInputStateDisable] = useState(false);
   const [typeData, setTypeData] = useState([]);
-  const [brandData, setBrandData] = useState([]);
 
   useEffect(() => {
     let current_messages = messages;
@@ -63,19 +60,14 @@ export default function Home() {
 
   useEffect(() => {
     if(!messages.length) return;
-  
+
     let radio_jsx = 
-      <>
-        <Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What is the brand and types of {message}?</Box></Box>
-        <Radio.Group defaultValue="a" buttonStyle="solid" onChange={onChange} value={value}>
-          <Space direction="vertical">
-            {typeData.map((value) => {
-              return <Radio.Button value={value}>{value}</Radio.Button>
-            })}
-            <Radio.Button value={"No list"} style={{ borderColor: 'red' }}>No list</Radio.Button>
-          </Space>
-        </Radio.Group>
-      </>
+      <RadioCard
+        title={`What is the brand and types of ${message}?`}
+        onChange={onChange}
+        value={value}
+        data={typeData}
+      />
 
     // axios.post(`http://127.0.0.1:5025/catalogaicopilot/get-product`, { question: value, flag: flag }, {
     axios.post(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/get-product`, { question: value, flag: flag }, {
@@ -124,62 +116,24 @@ export default function Home() {
 
     const categorize = <><Box textAlign={'center'}><Box as="h3" fontWeight={'bold'} fontSize={'18px'}>Drinks or Foods or Others?</Box><span>{response.data.categorization}</span></Box></>
     const pType = <><Box textAlign={'center'}><Box as="h3" fontWeight={'bold'} fontSize={'18px'}>Single product or Multi product?</Box><span>{ response.data.pType}</span></Box></>
-    const formFactor = response.data.formFactor.factors;
-    const formFactorData = <><Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>Form Foctors about product</Box><table className="chat_table">
+    const formFactorData = 
+      <FormFactor 
+        formFactor={response.data.formFactor.factors}
+      />
+    let suggestedData_jsx = 
+      <SuggestedData 
+        suggestedData={response.data.suggestedProductTitle}
+      />
+    let pData_jsx = 
+      <ProductDetail 
+        pData = {response.data.productDetail}
+    />
 
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Unit</th>
-        </tr>
-      </thead>
-      <tbody>
-        {formFactor.map((item) => 
-          <tr>
-            <td>{item.container}</td>
-            <td>{item.volume}</td>
-          </tr>
-        )}
-      </tbody>
-    </table></Box></>
-    let suggestedData = response.data.suggestedProductTitle;
-    let suggestedData_jsx = <><Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>Suggested Product Title Based on the location</Box><table className="chat_table">
-    <thead>
-      <tr>
-        <th>Type</th>
-        <th>Title</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>Local Name</td>
-        <td>{suggestedData.localname}</td>
-      </tr>
-      <tr>
-      <td>International Recognized Brand</td>
-        <td>{suggestedData.internationalrecognizedbrand}</td>
-      </tr>
-      <tr>
-      <td>Colloquial/Popular terms</td>
-        <td>{suggestedData.colloquial}</td>
-      </tr>
-      <tr>
-      <td>Additional Relevant Name</td>
-      <td>{suggestedData.additionalrelevantnames}</td>
-      </tr>
-    </tbody>
-    </table></Box></>
-
-    let pData = response.data.productDetail;
-    let data = [];
-    Object.keys(pData).map(item =>  data.push({ key: item, data: pData[item] }))
-    let pData_jsx = <><Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>Product Details</Box>{data.map((item, index) => item.key !== 'image' ? (<p key={index}><b style={{ textTransform: 'uppercase' }}>{item.key}: </b><span>{item.data}</span></p>): (<Box display={'flex'} flexDirection={'column'} gap={'10px'} justifyContent={'center'} alignItems={'center'}>{item?.data?.map((item) => <img src={item} alt="" width={'100px'} height={'100px'} />)}</Box>) )}</Box></>
     let current_messages = messages;
+
     if(flag === 1) {
       current_messages = [
         ...messages.slice(0, -1),
-        // { key: messages.length - 1, data: radio_jsx },
-        // { key: messages.length, data: value }
       ];
     } else {
       current_messages.push(
@@ -231,19 +185,13 @@ export default function Home() {
       last_message += `What types of ${response.data.nextProduct} you want to offer? You can select multiple product.`;
       
       const brandData = response.data.result.brands;
-      setBrandData(brandData);
       let radio_jsx = 
-      <>
-        <Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What is the brand and type of {response.data.nextProduct}?</Box></Box>
-        <Radio.Group defaultValue="a" buttonStyle="solid" onChange={onChangeBrand} value={value}>
-          <Space direction="vertical">
-            {brandData.map((value) => {
-              return <Radio.Button value={value}>{value}</Radio.Button>
-            })}
-            <Radio.Button value={"No list"} style={{ borderColor: 'red' }}>No list</Radio.Button>
-          </Space>
-        </Radio.Group>
-      </>
+        <RadioCard
+          title={`What is the brand and type of ${response.data.nextProduct}?`}
+          onChange={onChangeBrand}
+          value={value}
+          data={brandData}
+        />
       current_messages.push(
         { key: current_messages.length, data: last_message}
       )
@@ -259,6 +207,7 @@ export default function Home() {
       )
       setMessages([...current_messages]);
     }
+    console.log(messages);
     is_loading = false;
     setQuestion("");
   }
@@ -305,6 +254,7 @@ export default function Home() {
       console.log("response~~~~~~~~~~~", response);
       let current_messages = messages;
       current_messages.pop();
+
       switch (response.data.isJSON) {
         case 0:
           setMessages((messages) => [
@@ -316,18 +266,13 @@ export default function Home() {
           setInputStateDisable(true);
           console.log("response.data................", response.data);
           const brandData = response.data.result.brands;
-          setBrandData(brandData);
           let text_jsx = 
-            <><Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What is the brand and types of {response.data.currentProduct}?</Box></Box>
-            <Radio.Group defaultValue="a" buttonStyle="solid" onChange={onChangeBrand} value={value}>
-              <Space direction="vertical">
-                {brandData.map((value) => {
-                  return <Radio.Button value={value}>{value}</Radio.Button>
-                })}
-                <Radio.Button value={"No list"} style={{ borderColor: 'red' }}>No list</Radio.Button>
-              </Space>
-            </Radio.Group>
-            </>
+            <RadioCard
+              title={`What is the brand and types of ${response.data.currentProduct}?`}
+              onChange={onChangeBrand}
+              value={value}
+              data={brandData}
+            />
           setMessages((messages) => [
             ...current_messages,
             { key: current_messages.length, data: text_jsx },
@@ -337,20 +282,13 @@ export default function Home() {
           setInputStateDisable(true);
           const typeData = response.data.result.types;
           setTypeData(typeData);
-
           let radio_jsx = 
-          <>
-            <Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>What types of {response.data.currentProduct}?</Box></Box>
-            <Radio.Group defaultValue="a" buttonStyle="solid" onChange={onChange} value={value}>
-              <Space direction="vertical">
-                {typeData.map((value) => {
-                  return <Radio.Button value={value}>{value}</Radio.Button>
-                })}
-                <Radio.Button value={"No list"} style={{ borderColor: 'red' }}>No list</Radio.Button>
-              </Space>
-            </Radio.Group>
-            <Button className="more_btn" type="dashed" danger style={{ display: 'block', marginTop: '10px' }}>+ more</Button>
-          </>
+            <RadioCard
+              title={`What types of ${response.data.currentProduct}?`}
+              onChange={onChange}
+              value={value}
+              data={typeData}
+            />
           setMessages((messages) => [
             ...current_messages,
             { key: current_messages.length, data: radio_jsx },
@@ -364,39 +302,12 @@ export default function Home() {
           const dishName = response.data.dishName;
 
           const categorize = <><Box textAlign={'center'}><Box as="h3" fontWeight={'bold'} fontSize={'18px'}>Drinks or Foods or Others?</Box><span>{response.data.categorization}</span></Box></>
+          let suggestedData_jsx = <SuggestedData suggestedData={response.data.suggestedProductTitle}/>
 
-          let suggestedData = response.data.suggestedProductTitle;
-          let suggestedData_jsx = <><Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>Suggested Product Title Based on the location</Box><table className="chat_table">
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th>Title</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Local Name</td>
-              <td>{suggestedData.localname}</td>
-            </tr>
-            <tr>
-            <td>International Recognized Brand</td>
-              <td>{suggestedData.internationalrecognizedbrand}</td>
-            </tr>
-            <tr>
-            <td>Colloquial/Popular terms</td>
-              <td>{suggestedData.colloquial}</td>
-            </tr>
-            <tr>
-            <td>Additional Relevant Name</td>
-            <td>{suggestedData.additionalrelevantnames}</td>
-            </tr>
-          </tbody>
-          </table></Box></>
-
-          let pData = response.data.productDetail;
-          let data = [];
-          Object.keys(pData).map(item =>  data.push({ key: item, data: pData[item] }))
-          let pData_jsx = <><Box textAlign={"center"}><Box as="b" fontWeight={"bold"} fontSize={"18px"}>Product Details</Box>{data.map((item, index) => item.key !== 'image' ? (<p key={index}><b style={{ textTransform: 'uppercase' }}>{item.key}: </b><span>{item.data}</span></p>): (<Box display={'flex'} flexDirection={'column'} gap={'10px'} justifyContent={'center'} alignItems={'center'}>{item?.data?.map((item) => <img src={item} alt="" width={'100px'} height={'100px'} />)}</Box>) )}</Box></>
+          let pData_jsx = 
+            <ProductDetail 
+              pData = {response.data.productDetail}
+            />
           current_messages.push(
             { key: current_messages.length, data: ""}
           );
