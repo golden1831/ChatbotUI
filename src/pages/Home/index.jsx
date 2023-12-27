@@ -33,11 +33,13 @@ export default function Home() {
 
   const [value, setValue] = useState("");
   const [inputStateDisable, setInputStateDisable] = useState(false);
+  const [currentProduct, setCurrentProduct] = useState("");
 
   const [ws, setWs] = useState(null);
 
   useEffect(() => {
     const socket = new WebSocket(`wss://catalogaicopilot-l5n4jumt5q-ez.a.run.app?x-transaction-id=${transactionId}`);
+    // const socket = new WebSocket(`ws://localhost:5025?x-transaction-id=${transactionId}`);
     // Set up event listeners
     socket.onopen = () => {
       console.log('WebSocket connection established');
@@ -130,7 +132,6 @@ export default function Home() {
   }
 
   const pushElements = (data) => {
-    let last_message = `Thank you. The ${data?.currentProduct} will be added.`;
     console.log("Socket===>", data);
 
     if (data?.isJSON) {
@@ -147,6 +148,7 @@ export default function Home() {
       ]);
     }
     if (data?.categorization) {
+      setCurrentProduct(data.currentProduct);
       let categorize = <><Box textAlign={'center'}><Box as="h3" fontWeight={'bold'} fontSize={'18px'}>Drinks or Foods or Others?</Box><span>{data.categorization}</span></Box></>
       setQuestion("");
       setMessages((messages) => [
@@ -205,6 +207,7 @@ export default function Home() {
       ]);
     }
     if (data?.nextProduct) {
+      let last_message = `Thank you. The ${currentProduct} will be added.`;
       console.log("nextProduct", data.nextProduct);
       if (data.nextProduct !== "") {
         setInputStateDisable(true);
@@ -226,8 +229,7 @@ export default function Home() {
           { key: messages.length + 3, data: radio_jsx },
           { key: messages.length + 4, data: ""},
         ]);
-      } else if (data.nextProduct === "") {
-        console.log('hgh&rws');
+      } else {
         setFlag(0);
         setQuestion("");
         setMessages((messages) => [
