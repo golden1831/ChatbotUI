@@ -16,7 +16,7 @@ const ProductDetail = (props) => {
                 {data.map((item, index) => 
                     item.key !== 'image' ? 
                         (
-                            <p key={index}>
+                            <p key={`image${index}`}>
                                 <b style={{ textTransform: 'uppercase' }}>{item.key}: 
                                 </b>
                                 <span> 

@@ -12,8 +12,8 @@ const RadioCard = (props) => {
             </Box>
             <Radio.Group defaultValue="a" buttonStyle="solid" onChange={props.onChange} value={props.value}>
                 <Space direction="vertical">
-                {props.data.map((value) => {
-                    return <Radio.Button value={value}>{value}</Radio.Button>
+                {props.data.map((value, index) => {
+                    return <Radio.Button value={value} key={`radio${index}`}>{value}</Radio.Button>
                 })}
                 <Radio.Button value={"No list"} style={{ borderColor: 'red' }}>No list</Radio.Button>
             </Space>

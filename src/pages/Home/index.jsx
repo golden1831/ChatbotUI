@@ -29,12 +29,38 @@ export default function Home() {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState([]);
-  const [message, setMessage] = useState("");
   const [flag, setFlag] = useState(0);
 
   const [value, setValue] = useState("");
   const [inputStateDisable, setInputStateDisable] = useState(false);
-  const [typeData, setTypeData] = useState([]);
+
+  const [ws, setWs] = useState(null);
+
+  useEffect(() => {
+    const socket = new WebSocket(`ws://catalogaicopilot-l5n4jumt5q-ez.a.run.app?x-transaction-id=${transactionId}`);
+    // Set up event listeners
+    socket.onopen = () => {
+      console.log('WebSocket connection established');
+    };
+
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      pushElements(data);
+    };
+
+    socket.onerror = (event) => {
+      console.error('WebSocket error:', event);
+    };
+
+    socket.onclose = () => {
+      console.log('WebSocket connection closed');
+    };
+    setWs(socket);
+
+    return () => {
+      socket.close();
+    }
+  }, []);
 
   useEffect(() => {
     let current_messages = messages;
@@ -60,15 +86,6 @@ export default function Home() {
 
   useEffect(() => {
     if(!messages.length) return;
-
-    let radio_jsx = 
-      <RadioCard
-        title={`What is the brand and types of ${message}?`}
-        onChange={onChange}
-        value={value}
-        data={typeData}
-      />
-
     // axios.post(`http://127.0.0.1:5025/catalogaicopilot/get-product`, { question: value, flag: flag }, {
     axios.post(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/get-product`, { question: value, flag: flag }, {
       headers: {
@@ -77,7 +94,7 @@ export default function Home() {
       }
     })
     .then(function (response) {
-      generateProductElements(radio_jsx, response, 1);
+      console.log("response-->", response);
     })
     .catch(function (error) {
       return error;
@@ -112,105 +129,116 @@ export default function Home() {
     setInputStateDisable(false);
   }
 
-  const generateProductElements = (radio_jsx, response, flag) => {
+  const pushElements = (data) => {
+    let last_message = `Thank you. The ${data?.currentProduct} will be added.`;
+    console.log("Socket===>", data);
 
-    const categorize = <><Box textAlign={'center'}><Box as="h3" fontWeight={'bold'} fontSize={'18px'}>Drinks or Foods or Others?</Box><span>{response.data.categorization}</span></Box></>
-    const pType = <><Box textAlign={'center'}><Box as="h3" fontWeight={'bold'} fontSize={'18px'}>Single product or Multi product?</Box><span>{ response.data.pType}</span></Box></>
-    const formFactorData = 
-      <FormFactor 
-        formFactor={response.data.formFactor.factors}
-      />
-    let suggestedData_jsx = 
-      <SuggestedData 
-        suggestedData={response.data.suggestedProductTitle}
-      />
-    let pData_jsx = 
-      <ProductDetail 
-        pData = {response.data.productDetail}
-    />
-
-    let current_messages = messages;
-
-    if(flag === 1) {
-      current_messages = [
+    if (data?.isJSON) {
+      setQuestion("");
+      setMessages((messages) => [
         ...messages.slice(0, -1),
-      ];
+        { key: messages.length + 1, data: "" },
+        { key: messages.length + 2  , data: "" },
+      ]);
     } else {
-      current_messages.push(
-        { key: current_messages.length, data: ""}
-      );
+      setQuestion("");
+      setMessages((messages) => [
+        ...messages.slice(0, -1),
+      ]);
     }
-    current_messages.push(
-      { key: messages.length + 1, data: categorize },
-    );
-    current_messages.push(
-      { key: messages.length + 2, data: "" },
-    );
-    current_messages.push(
-      { key: messages.length + 3, data: pType },
-    );
-    current_messages.push(
-      { key: messages.length + 4, data: "" },
-    );
-    current_messages.push(
-      { key: messages.length + 5, data: formFactorData },
-    );
-    current_messages.push(
-      { key: messages.length + 6, data: "" },
-    );
-    current_messages.push(
-      { key: messages.length + 7, data: suggestedData_jsx },
-    );
-    current_messages.push(
-      { key: messages.length + 8, data: "" },
-    );
-    current_messages.push(
-      { key: messages.length + 9, data: pData_jsx },
-    );
-    current_messages.push(
-      { key: messages.length + 10, data: ""}
-    );
-    setMessages([...current_messages]);
-
-    if (flag === 0) {
-      current_messages.push(
-        { key: current_messages.length, data: ""}
-      );
+    if (data?.categorization) {
+      let categorize = <><Box textAlign={'center'}><Box as="h3" fontWeight={'bold'} fontSize={'18px'}>Drinks or Foods or Others?</Box><span>{data.categorization}</span></Box></>
+      setQuestion("");
+      setMessages((messages) => [
+        ...messages,
+        { key: messages.length + 1, data: categorize },
+        { key: messages.length + 2, data: "" },
+      ]);
     }
-    
-    let last_message = `Thank you. The ${response.data.currentProduct} will be added.`;
-    if (response.data.nextProduct) {
-      setInputStateDisable(true);
-      setFlag(1);
-      last_message += `What types of ${response.data.nextProduct} you want to offer? You can select multiple product.`;
-      
-      const brandData = response.data.result.brands;
-      let radio_jsx = 
-        <RadioCard
-          title={`What is the brand and type of ${response.data.nextProduct}?`}
-          onChange={onChangeBrand}
-          value={value}
-          data={brandData}
+    if (data?.pType) {
+      let pType = <><Box textAlign={'center'}><Box as="h3" fontWeight={'bold'} fontSize={'18px'}>Single product or Multi product?</Box><span>{data.pType}</span></Box></>
+      setQuestion("");
+      setMessages((messages) => [
+        ...messages,
+        { key: messages.length + 1, data: pType },
+        { key: messages.length + 2, data: "" },
+        { key: messages.length + 3, data: "..." },
+      ]);
+    }
+    if (data?.formFactor?.factors) {
+      let formFactorData = 
+        <FormFactor 
+          formFactor={data.formFactor.factors}
         />
-      current_messages.push(
-        { key: current_messages.length, data: last_message}
-      )
-      current_messages.push(
-        { key: current_messages.length, data: ""}
-      );
-      current_messages.push({ key: current_messages.length, data: radio_jsx });
-      setMessages([...current_messages]);
-    } else {
-      setFlag(0)
-      current_messages.push(
-        { key: current_messages.length, data: last_message}
-      )
-      setMessages([...current_messages]);
+      setQuestion("");
+      setMessages((messages) => [
+        ...messages,
+        { key: messages.length + 1, data: formFactorData },
+        { key: messages.length + 2, data: "" },
+        { key: messages.length + 3, data: "..." },
+      ]);
     }
-    console.log(messages);
+    if (data?.suggestedProductTitle) {
+      let suggestedData_jsx = 
+        <SuggestedData 
+          suggestedData={data.suggestedProductTitle}
+        />
+      setQuestion("");
+      setMessages((messages) => [
+        ...messages,
+        { key: messages.length + 1, data: suggestedData_jsx },
+        { key: messages.length + 2, data: "" },
+        { key: messages.length + 3, data: "..." },
+      ]);
+    }
+    if (data?.productDetail) {
+      let pData_jsx = 
+        <ProductDetail 
+          pData = {data.productDetail}
+        />
+        setQuestion("");
+        setMessages((messages) => [
+        ...messages,
+        { key: messages.length + 1, data: pData_jsx },
+        { key: messages.length + 2, data: ""},
+        { key: messages.length + 3, data: "..." },
+      ]);
+    }
+    if (data?.nextProduct) {
+      console.log("nextProduct", data.nextProduct);
+      if (data.nextProduct !== "") {
+        setInputStateDisable(true);
+        setFlag(1);
+        last_message += `What types of ${data.nextProduct} you want to offer? You can select multiple product.`;
+        const brandData = data.result.brands;
+        let radio_jsx = 
+          <RadioCard
+            title={`What is the brand and type of ${data.nextProduct}?`}
+            onChange={onChangeBrand}
+            value={value}
+            data={brandData}
+          />
+        setQuestion("");
+        setMessages((messages) => [
+          ...messages,
+          { key: messages.length + 1, data: last_message},
+          { key: messages.length + 2, data: ""},
+          { key: messages.length + 3, data: radio_jsx },
+          { key: messages.length + 4, data: ""},
+        ]);
+      } else if (data.nextProduct === "") {
+        console.log('hgh&rws');
+        setFlag(0);
+        setQuestion("");
+        setMessages((messages) => [
+          ...messages,
+          { key: messages.length + 1, data: last_message}
+        ]);
+      }
+    }
     is_loading = false;
-    setQuestion("");
-  }
+    console.log("MESSAGES===>", messages);
+  } 
 
   const req_qa_box = useRef(null);
 
@@ -250,7 +278,6 @@ export default function Home() {
       }
     })
     .then(function (response) {
-      setMessage(response.data.currentProduct);
       console.log("response~~~~~~~~~~~", response);
       let current_messages = messages;
       current_messages.pop();
@@ -281,7 +308,6 @@ export default function Home() {
         case 2:
           setInputStateDisable(true);
           const typeData = response.data.result.types;
-          setTypeData(typeData);
           let radio_jsx = 
             <RadioCard
               title={`What types of ${response.data.currentProduct}?`}
@@ -295,7 +321,6 @@ export default function Home() {
           ]);
           break;
         case 3: 
-          generateProductElements(<></>, response, 0);
           break;
         case 4:
           console.log("food response.data---->", response.data);

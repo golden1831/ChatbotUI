@@ -16,8 +16,8 @@ const FormFactor = (props) => {
                         </tr>
                     </thead>
                     <tbody>
-                        {props.formFactor.map((item) => 
-                        <tr>
+                        {props.formFactor.map((item, index) => 
+                        <tr key={`tr${index}`}>
                             <td>{item.container}</td>
                             <td>{item.volume}</td>
                         </tr>
