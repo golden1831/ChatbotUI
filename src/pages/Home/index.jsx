@@ -33,11 +33,13 @@ export default function Home() {
 
   const [value, setValue] = useState("");
   const [inputStateDisable, setInputStateDisable] = useState(false);
-  const [currentProduct, setCurrentProduct] = useState("");
 
   const [ws, setWs] = useState(null);
+  const reconnectTimer = useRef(null);
+  const maxReconnectAttempts = useRef(5); // Maximum reconnection attempts
+  const reconnectAttempts = useRef(0); // Current reconnection attempt count
 
-  useEffect(() => {
+  const connectWebSocket = () => {
     const socket = new WebSocket(`wss://catalogaicopilot-l5n4jumt5q-ez.a.run.app?x-transaction-id=${transactionId}`);
     // const socket = new WebSocket(`ws://localhost:5025?x-transaction-id=${transactionId}`);
     // Set up event listeners
@@ -55,12 +57,30 @@ export default function Home() {
     };
 
     socket.onclose = () => {
-      console.log('WebSocket connection closed');
+      console.log('Disconnected from WebSocket server.');
+      if (reconnectAttempts.current < maxReconnectAttempts.current) {
+        console.log('Attempting to reconnect...');
+        clearTimeout(reconnectTimer.current);
+        reconnectTimer.current = setTimeout(() => {
+          reconnectAttempts.current++;
+          connectWebSocket();
+        }, 3000 * reconnectAttempts.current); // Exponential backoff
+      } else {
+        console.log('Maximum reconnect attempts reached.');
+      }
     };
+
     setWs(socket);
+  };
+
+  useEffect(() => {
+    connectWebSocket();
 
     return () => {
-      socket.close();
+      if (ws) {
+        ws.close();
+      }
+      clearTimeout(reconnectTimer.current);
     }
   }, []);
 
@@ -134,7 +154,7 @@ export default function Home() {
   const pushElements = (data) => {
     console.log("Socket===>", data);
 
-    if (data?.isJSON) {
+    if (data?.isJSON || data?.isJSON == 0) {
       setQuestion("");
       setMessages((messages) => [
         ...messages.slice(0, -1),
@@ -148,7 +168,8 @@ export default function Home() {
       ]);
     }
     if (data?.categorization) {
-      setCurrentProduct(data.currentProduct);
+      console.log("currentProduct", data.currentProduct);
+      localStorage.setItem("currentProduct", data.currentProduct);
       let categorize = <><Box textAlign={'center'}><Box as="h3" fontWeight={'bold'} fontSize={'18px'}>Drinks or Foods or Others?</Box><span>{data.categorization}</span></Box></>
       setQuestion("");
       setMessages((messages) => [
@@ -206,8 +227,8 @@ export default function Home() {
         { key: messages.length + 3, data: "..." },
       ]);
     }
-    if (data?.nextProduct) {
-      let last_message = `Thank you. The ${currentProduct} will be added.`;
+    if (data?.nextProduct || data?.nextProduct == '') {
+      let last_message = `Thank you. The ${localStorage.getItem("currentProduct")} will be added. `;
       console.log("nextProduct", data.nextProduct);
       if (data.nextProduct !== "") {
         setInputStateDisable(true);
@@ -234,7 +255,8 @@ export default function Home() {
         setQuestion("");
         setMessages((messages) => [
           ...messages,
-          { key: messages.length + 1, data: last_message}
+          { key: messages.length + 1, data: last_message},
+          { key: messages.length + 2, data: ""},
         ]);
       }
     }
