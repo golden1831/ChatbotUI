@@ -37,7 +37,7 @@ export default function Home() {
   const [ws, setWs] = useState(null);
 
   useEffect(() => {
-    const socket = new WebSocket(`ws://catalogaicopilot-l5n4jumt5q-ez.a.run.app?x-transaction-id=${transactionId}`);
+    const socket = new WebSocket(`wss://catalogaicopilot-l5n4jumt5q-ez.a.run.app?x-transaction-id=${transactionId}`);
     // Set up event listeners
     socket.onopen = () => {
       console.log('WebSocket connection established');
