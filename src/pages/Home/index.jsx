@@ -84,12 +84,79 @@ export default function Home() {
     }
   }, []);
 
-  useEffect(() => {
-    let current_messages = messages;
-    current_messages.push(
-      { key: messages.length, data: "" },
-    );
 
+  const generateChatHistroy  = async (response) => {
+    let history = [];
+    let key = 0;
+
+    await response.forEach(row => {
+      let item;
+      try {
+        item = JSON.parse(row.data);
+      } catch (error) {
+        console.log(error);
+      }
+
+      if (row.flag == 0 && key % 2 == 0 ) {
+        history.push({ key: key, data: "" });
+        key++;
+      } else if (row.flag == 1 && key % 2 == 1 ) {
+        history.push({ key: key, data: "" });
+        key++;
+      }
+
+      switch (row.type) {
+        case "text":
+          history.push({key: key, data: row.data});
+          break;
+        case "brandlist":
+          history.push({
+            key: key, data: <RadioCard title={item.title} onChange={onChangeBrand} value={value} data={item.brands} />
+          });
+          break;
+        case "typelist":
+          history.push({
+            key: key, data: <RadioCard title={item.title} onChange={onChange} value={value} data={item.types} />
+          });
+          break;
+        case "category":
+          history.push({
+            key: key, data: <><Box textAlign={'center'}><Box as="h3" fontWeight={'bold'} fontSize={'18px'}>Drinks or Foods or Others?</Box><span>{item.categorization}</span></Box></>
+          });
+          break;
+        case "ptype":
+          history.push({
+            key: key, data: <><Box textAlign={'center'}><Box as="h3" fontWeight={'bold'} fontSize={'18px'}>Single product or Multi product?</Box><span>{item.pType}</span></Box></>
+          });
+          break;
+        case "formfactor":
+          history.push({
+            key: key, data: <FormFactor formFactor={item.formFactor.factors} />
+          });
+          break;
+        case "suggest":
+          history.push({
+            key: key, data: <SuggestedData suggestedData={item.suggestedProductTitle} />
+          });
+          break;
+        case "detail":
+          history.push({
+            key: key, data: <ProductDetail pData = {item.productDetail} />
+          });
+          break;
+        default:
+          break;
+      }
+      key++;
+    });
+
+    setMessages((messages) => [ 
+      ...messages,
+      ...history,
+    ]);
+  }
+
+  useEffect(() => {
     // axios.get('http://127.0.0.1:5025/catalogaicopilot/api', {
       axios.get(`https://catalogaicopilot-l5n4jumt5q-ez.a.run.app/catalogaicopilot/api`, {
       headers: {
@@ -97,12 +164,8 @@ export default function Home() {
         'x-transaction-id': transactionId
       }}
     )
-    .then(function (response) {
-      console.log("response===.", response);
-      setMessages((messages) => [ 
-        ...current_messages,
-        { key: current_messages.length, data: response.data },
-      ]);
+    .then(function (response) {      
+      generateChatHistroy(response.data);
     });
   }, []);
 
@@ -138,7 +201,6 @@ export default function Home() {
   };
 
   const onChangeBrand = (e) => {
-    console.log(e.target.value);
     if (e.target.value !== "No list") {
       is_loading = true;
       setQuestion(e.target.value);
@@ -152,8 +214,6 @@ export default function Home() {
   }
 
   const pushElements = (data) => {
-    console.log("Socket===>", data);
-
     if (data?.isJSON || data?.isJSON == 0) {
       setQuestion("");
       setMessages((messages) => [
@@ -168,7 +228,6 @@ export default function Home() {
       ]);
     }
     if (data?.categorization) {
-      console.log("currentProduct", data.currentProduct);
       localStorage.setItem("currentProduct", data.currentProduct);
       let categorize = <><Box textAlign={'center'}><Box as="h3" fontWeight={'bold'} fontSize={'18px'}>Drinks or Foods or Others?</Box><span>{data.categorization}</span></Box></>
       setQuestion("");
@@ -229,7 +288,6 @@ export default function Home() {
     }
     if (data?.nextProduct || data?.nextProduct == '') {
       let last_message = `Thank you. The ${localStorage.getItem("currentProduct")} will be added. `;
-      console.log("nextProduct", data.nextProduct);
       if (data.nextProduct !== "") {
         setInputStateDisable(true);
         setFlag(1);
@@ -261,7 +319,6 @@ export default function Home() {
       }
     }
     is_loading = false;
-    console.log("MESSAGES===>", messages);
   } 
 
   const req_qa_box = useRef(null);
@@ -302,7 +359,6 @@ export default function Home() {
       }
     })
     .then(function (response) {
-      console.log("response~~~~~~~~~~~", response);
       let current_messages = messages;
       current_messages.pop();
 
@@ -315,7 +371,6 @@ export default function Home() {
         break;
         case 1:
           setInputStateDisable(true);
-          console.log("response.data................", response.data);
           const brandData = response.data.result.brands;
           let text_jsx = 
             <RadioCard
@@ -347,7 +402,6 @@ export default function Home() {
         case 3: 
           break;
         case 4:
-          console.log("food response.data---->", response.data);
           const dishName = response.data.dishName;
 
           const categorize = <><Box textAlign={'center'}><Box as="h3" fontWeight={'bold'} fontSize={'18px'}>Drinks or Foods or Others?</Box><span>{response.data.categorization}</span></Box></>
